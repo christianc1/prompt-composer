@@ -14,8 +14,6 @@ import { copyToClipboard } from '../utils/clipboard';
  */
 export async function viewPromptHistory(): Promise<void> {
   try {
-    console.log(chalk.dim('DEBUG: Starting viewPromptHistory function'));
-    
     console.clear();
     console.log(chalk.cyan.bold(`
 ╔═══════════════════════════════════════════════════════════════╗
@@ -29,7 +27,6 @@ export async function viewPromptHistory(): Promise<void> {
     console.log(chalk.cyan.bold('Prompt History\n'));
     
     const recentHistory = listRecentHistory(10);
-    console.log(chalk.dim(`DEBUG: Found ${recentHistory.length} history items`));
     
     if (recentHistory.length === 0) {
       console.log(chalk.yellow('No prompt history found.'));
@@ -44,7 +41,6 @@ export async function viewPromptHistory(): Promise<void> {
       
       const shouldGoBack = await backPrompt.run();
       if (shouldGoBack) {
-        console.log(chalk.dim('DEBUG: Returning to main menu'));
         return; // Return to main menu
       } else {
         process.exit(0);
@@ -85,10 +81,8 @@ export async function viewPromptHistory(): Promise<void> {
     });
     
     const selectedHistoryFile = await historyPrompt.run();
-    console.log(chalk.dim(`DEBUG: Selected history file: ${selectedHistoryFile}`));
     
     if (selectedHistoryFile === 'back') {
-      console.log(chalk.dim('DEBUG: Back to main menu selected'));
       return; // Return to main menu
     }
     
@@ -130,7 +124,6 @@ export async function viewPromptHistory(): Promise<void> {
     });
     
     const selectedAction = await actionPrompt.run();
-    console.log(chalk.dim(`DEBUG: Selected action: ${selectedAction}`));
     
     switch (selectedAction) {
       case 'view':
@@ -171,7 +164,6 @@ export async function viewPromptHistory(): Promise<void> {
         });
         
         const afterViewAction = await afterViewPrompt.run();
-        console.log(chalk.dim(`DEBUG: After view action: ${afterViewAction}`));
         
         if (afterViewAction === 'copy') {
           if (copyToClipboard(promptContent)) {
@@ -218,7 +210,6 @@ export async function viewPromptHistory(): Promise<void> {
         });
         
         const afterCopyAction = await afterCopyPrompt.run();
-        console.log(chalk.dim(`DEBUG: After copy action: ${afterCopyAction}`));
         
         if (afterCopyAction === 'back') {
           await viewPromptHistory();

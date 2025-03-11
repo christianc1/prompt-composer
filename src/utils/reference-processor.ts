@@ -69,7 +69,6 @@ export async function promptForFileInDirectory(dirPath: string, reference: strin
   });
   
   const selectedFile = await filePrompt.run();
-  console.log(chalk.dim(`DEBUG: Selected file: ${selectedFile}`));
   const filePath = path.join(dirPath, selectedFile.endsWith('.md') ? selectedFile : `${selectedFile}.md`);
   return fs.readFileSync(filePath, 'utf8');
 }

@@ -72,20 +72,29 @@ async function generatePrompt() {
         }
     });
     const selectedCategory = await categoryPrompt.run();
-    console.log(chalk_1.default.dim(`DEBUG: Selected category: ${selectedCategory}`));
+    // Handle "back" action
+    if (selectedCategory === 'back') {
+        return;
+    }
+    // Get prompts or subcategories in the selected category
     const categoryPath = path.join(promptsDir, selectedCategory);
-    // Step 2: Select subcategory if available
     const subcategories = (0, file_1.listDirectories)(categoryPath);
-    let subcategoryPath = categoryPath;
+    // Define promptDirectory variable that will be set inside the if/else blocks
+    let promptDirectory;
     if (subcategories.length > 0) {
+        // If there are subcategories, prompt for selection
         const subcategoryChoices = subcategories.map(subcat => ({
             message: subcat,
-            value: subcat,
-            hint: `${(0, file_1.listMarkdownFiles)(path.join(categoryPath, subcat)).length} prompts`
+            value: subcat
         }));
+        // Add a "back" option
+        subcategoryChoices.push({
+            message: 'Back to categories',
+            value: 'back'
+        });
         const subcategoryPrompt = new Select({
             name: 'subcategory',
-            message: `Select a ${selectedCategory} subcategory:`,
+            message: 'Select a subcategory:',
             choices: subcategoryChoices,
             indicator(state, choice) {
                 return choice.enabled ? chalk_1.default.green('›') : ' ';
@@ -98,28 +107,53 @@ async function generatePrompt() {
             }
         });
         const selectedSubcategory = await subcategoryPrompt.run();
-        console.log(chalk_1.default.dim(`DEBUG: Selected subcategory: ${selectedSubcategory}`));
-        subcategoryPath = path.join(categoryPath, selectedSubcategory);
+        if (selectedSubcategory === 'back') {
+            // If "back" was selected, restart the prompt generation process
+            return await generatePrompt();
+        }
+        // Set the prompt directory to the selected subcategory
+        promptDirectory = path.join(categoryPath, selectedSubcategory);
     }
-    // Step 3: Select prompt file
-    const promptFiles = (0, file_1.listMarkdownFiles)(subcategoryPath);
+    else {
+        // If no subcategories, use the selected category as the prompt directory
+        promptDirectory = categoryPath;
+    }
+    // List available prompt files
+    const promptFiles = (0, file_1.listMarkdownFiles)(promptDirectory);
     if (promptFiles.length === 0) {
-        console.log(chalk_1.default.red(`No prompt files found in ${subcategoryPath}. Please create some .md files first.`));
-        return;
+        console.log(chalk_1.default.yellow('No prompt files found in the selected directory.'));
+        // Ask if user wants to try again
+        const tryAgainPrompt = new Confirm({
+            name: 'tryAgain',
+            message: 'Would you like to try another category?',
+            initial: true
+        });
+        if (await tryAgainPrompt.run()) {
+            return await generatePrompt();
+        }
+        else {
+            return;
+        }
     }
-    // Get metadata for each prompt file
+    // Create choices for prompt files
     const promptChoices = promptFiles.map(file => {
-        const filePath = path.join(subcategoryPath, file);
-        const metadata = (0, file_1.getPromptMetadata)(filePath);
+        // Get metadata from the file
+        const metadata = (0, file_1.getPromptMetadata)(path.join(promptDirectory, file));
         return {
-            message: file,
+            message: metadata.title || file.replace('.md', ''),
             value: file,
-            hint: metadata.purpose
+            hint: metadata.purpose || ''
         };
     });
-    const promptPrompt = new Select({
-        name: 'prompt',
-        message: `Select a prompt:`,
+    // Add a "back" option
+    promptChoices.push({
+        message: 'Back',
+        value: 'back'
+    });
+    // Prompt for selecting a prompt file
+    const promptFilePrompt = new Select({
+        name: 'promptFile',
+        message: 'Select a prompt file:',
         choices: promptChoices,
         indicator(state, choice) {
             return choice.enabled ? chalk_1.default.green('›') : ' ';
@@ -131,9 +165,10 @@ async function generatePrompt() {
             return chalk_1.default.cyan(choice.message);
         }
     });
-    const selectedPromptFile = await promptPrompt.run();
-    console.log(chalk_1.default.dim(`DEBUG: Selected prompt file: ${selectedPromptFile}`));
-    const promptFilePath = path.join(subcategoryPath, selectedPromptFile);
+    const selectedPromptFile = await promptFilePrompt.run();
+    if (selectedPromptFile === 'back') {
+        return await generatePrompt();
+    }
     // Step 4: Read the prompt file and analyze references
     console.log(chalk_1.default.cyan(`\nProcessing ${chalk_1.default.bold(selectedPromptFile)}...\n`));
     const spinner = (0, ora_1.default)({
@@ -141,7 +176,7 @@ async function generatePrompt() {
         spinner: 'dots'
     }).start();
     try {
-        const promptContent = fs.readFileSync(promptFilePath, 'utf8');
+        const promptContent = fs.readFileSync(path.join(promptDirectory, selectedPromptFile), 'utf8');
         // Step 5: Process references and generate the final prompt
         const processedContent = await (0, reference_processor_1.processPromptWithReferences)(promptContent);
         // Step 6: Process includes (if any)

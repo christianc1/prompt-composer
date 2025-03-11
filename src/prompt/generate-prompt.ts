@@ -51,23 +51,35 @@ export async function generatePrompt(): Promise<void> {
   });
   
   const selectedCategory = await categoryPrompt.run();
-  console.log(chalk.dim(`DEBUG: Selected category: ${selectedCategory}`));
-  const categoryPath = path.join(promptsDir, selectedCategory);
   
-  // Step 2: Select subcategory if available
+  // Handle "back" action
+  if (selectedCategory === 'back') {
+    return;
+  }
+  
+  // Get prompts or subcategories in the selected category
+  const categoryPath = path.join(promptsDir, selectedCategory);
   const subcategories = listDirectories(categoryPath);
-  let subcategoryPath = categoryPath;
+  
+  // Define promptDirectory variable that will be set inside the if/else blocks
+  let promptDirectory: string;
   
   if (subcategories.length > 0) {
+    // If there are subcategories, prompt for selection
     const subcategoryChoices: SelectChoice[] = subcategories.map(subcat => ({
       message: subcat,
-      value: subcat,
-      hint: `${listMarkdownFiles(path.join(categoryPath, subcat)).length} prompts`
+      value: subcat
     }));
+    
+    // Add a "back" option
+    subcategoryChoices.push({
+      message: 'Back to categories',
+      value: 'back'
+    });
     
     const subcategoryPrompt = new Select({
       name: 'subcategory',
-      message: `Select a ${selectedCategory} subcategory:`,
+      message: 'Select a subcategory:',
       choices: subcategoryChoices,
       indicator(state: any, choice: any) {
         return choice.enabled ? chalk.green('›') : ' ';
@@ -81,33 +93,60 @@ export async function generatePrompt(): Promise<void> {
     });
     
     const selectedSubcategory = await subcategoryPrompt.run();
-    console.log(chalk.dim(`DEBUG: Selected subcategory: ${selectedSubcategory}`));
-    subcategoryPath = path.join(categoryPath, selectedSubcategory);
+    
+    if (selectedSubcategory === 'back') {
+      // If "back" was selected, restart the prompt generation process
+      return await generatePrompt();
+    }
+    
+    // Set the prompt directory to the selected subcategory
+    promptDirectory = path.join(categoryPath, selectedSubcategory);
+  } else {
+    // If no subcategories, use the selected category as the prompt directory
+    promptDirectory = categoryPath;
   }
   
-  // Step 3: Select prompt file
-  const promptFiles = listMarkdownFiles(subcategoryPath);
+  // List available prompt files
+  const promptFiles = listMarkdownFiles(promptDirectory);
   
   if (promptFiles.length === 0) {
-    console.log(chalk.red(`No prompt files found in ${subcategoryPath}. Please create some .md files first.`));
-    return;
+    console.log(chalk.yellow('No prompt files found in the selected directory.'));
+    
+    // Ask if user wants to try again
+    const tryAgainPrompt = new Confirm({
+      name: 'tryAgain',
+      message: 'Would you like to try another category?',
+      initial: true
+    });
+    
+    if (await tryAgainPrompt.run()) {
+      return await generatePrompt();
+    } else {
+      return;
+    }
   }
   
-  // Get metadata for each prompt file
+  // Create choices for prompt files
   const promptChoices: SelectChoice[] = promptFiles.map(file => {
-    const filePath = path.join(subcategoryPath, file);
-    const metadata = getPromptMetadata(filePath);
-    
+    // Get metadata from the file
+    const metadata = getPromptMetadata(path.join(promptDirectory, file));
     return {
-      message: file,
+      message: metadata.title || file.replace('.md', ''),
       value: file,
-      hint: metadata.purpose
+      hint: metadata.purpose || ''
     };
   });
   
-  const promptPrompt = new Select({
-    name: 'prompt',
-    message: `Select a prompt:`,
+  // Add a "back" option
+  promptChoices.push({
+    message: 'Back',
+    value: 'back'
+  });
+  
+  // Prompt for selecting a prompt file
+  const promptFilePrompt = new Select({
+    name: 'promptFile',
+    message: 'Select a prompt file:',
     choices: promptChoices,
     indicator(state: any, choice: any) {
       return choice.enabled ? chalk.green('›') : ' ';
@@ -120,9 +159,11 @@ export async function generatePrompt(): Promise<void> {
     }
   });
   
-  const selectedPromptFile = await promptPrompt.run();
-  console.log(chalk.dim(`DEBUG: Selected prompt file: ${selectedPromptFile}`));
-  const promptFilePath = path.join(subcategoryPath, selectedPromptFile);
+  const selectedPromptFile = await promptFilePrompt.run();
+  
+  if (selectedPromptFile === 'back') {
+    return await generatePrompt();
+  }
   
   // Step 4: Read the prompt file and analyze references
   console.log(chalk.cyan(`\nProcessing ${chalk.bold(selectedPromptFile)}...\n`));
@@ -133,7 +174,7 @@ export async function generatePrompt(): Promise<void> {
   }).start();
   
   try {
-    const promptContent = fs.readFileSync(promptFilePath, 'utf8');
+    const promptContent = fs.readFileSync(path.join(promptDirectory, selectedPromptFile), 'utf8');
     
     // Step 5: Process references and generate the final prompt
     const processedContent = await processPromptWithReferences(promptContent);

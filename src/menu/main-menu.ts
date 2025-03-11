@@ -63,8 +63,8 @@ export async function mainMenu(): Promise<void> {
     });
     
     const menuChoice = await menuPrompt.run();
-    console.log(chalk.dim(`DEBUG: Menu choice selected: ${menuChoice}`));
     
+    // Process menu choice
     switch (menuChoice) {
       case 'generate':
         await generatePrompt();
@@ -77,11 +77,11 @@ export async function mainMenu(): Promise<void> {
         await mainMenu();
         break;
       case 'exit':
-        console.log(chalk.cyan('\nThank you for using Prompt Composer! Goodbye.\n'));
+        console.log(chalk.blue('Goodbye! 👋'));
         process.exit(0);
         break;
       default:
-        console.log(chalk.yellow(`Invalid selection: ${menuChoice}. Please try again.`));
+        console.log(chalk.red('Invalid option selected.'));
         await mainMenu();
         break;
     }

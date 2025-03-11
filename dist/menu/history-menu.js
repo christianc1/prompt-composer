@@ -40,7 +40,6 @@ const clipboard_1 = require("../utils/clipboard");
  */
 async function viewPromptHistory() {
     try {
-        console.log(chalk_1.default.dim('DEBUG: Starting viewPromptHistory function'));
         console.clear();
         console.log(chalk_1.default.cyan.bold(`
 ╔═══════════════════════════════════════════════════════════════╗
@@ -52,7 +51,6 @@ async function viewPromptHistory() {
         console.log(chalk_1.default.dim('Interactive tool for composing AI prompts with templates\n'));
         console.log(chalk_1.default.cyan.bold('Prompt History\n'));
         const recentHistory = (0, history_1.listRecentHistory)(10);
-        console.log(chalk_1.default.dim(`DEBUG: Found ${recentHistory.length} history items`));
         if (recentHistory.length === 0) {
             console.log(chalk_1.default.yellow('No prompt history found.'));
             console.log(chalk_1.default.dim('Generate some prompts first to build history.'));
@@ -64,7 +62,6 @@ async function viewPromptHistory() {
             });
             const shouldGoBack = await backPrompt.run();
             if (shouldGoBack) {
-                console.log(chalk_1.default.dim('DEBUG: Returning to main menu'));
                 return; // Return to main menu
             }
             else {
@@ -102,9 +99,7 @@ async function viewPromptHistory() {
             }
         });
         const selectedHistoryFile = await historyPrompt.run();
-        console.log(chalk_1.default.dim(`DEBUG: Selected history file: ${selectedHistoryFile}`));
         if (selectedHistoryFile === 'back') {
-            console.log(chalk_1.default.dim('DEBUG: Back to main menu selected'));
             return; // Return to main menu
         }
         // Read the selected prompt file
@@ -143,7 +138,6 @@ async function viewPromptHistory() {
             }
         });
         const selectedAction = await actionPrompt.run();
-        console.log(chalk_1.default.dim(`DEBUG: Selected action: ${selectedAction}`));
         switch (selectedAction) {
             case 'view':
                 console.log('\n' + chalk_1.default.dim('─'.repeat(80)) + '\n');
@@ -181,7 +175,6 @@ async function viewPromptHistory() {
                     }
                 });
                 const afterViewAction = await afterViewPrompt.run();
-                console.log(chalk_1.default.dim(`DEBUG: After view action: ${afterViewAction}`));
                 if (afterViewAction === 'copy') {
                     if ((0, clipboard_1.copyToClipboard)(promptContent)) {
                         console.log(chalk_1.default.green('✓ Prompt copied to clipboard!'));
@@ -227,7 +220,6 @@ async function viewPromptHistory() {
                     }
                 });
                 const afterCopyAction = await afterCopyPrompt.run();
-                console.log(chalk_1.default.dim(`DEBUG: After copy action: ${afterCopyAction}`));
                 if (afterCopyAction === 'back') {
                     await viewPromptHistory();
                 }
