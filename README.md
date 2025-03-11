@@ -113,7 +113,7 @@ Follow the interactive menu to:
 You can include content from other files using the include directive:
 
 ```markdown
-<!-- @include path/to/file.md -->
+{{path.to.folder|file}}
 ```
 
 ### Reference Templates
@@ -133,4 +133,4 @@ npm run dev
 
 ## Markdown Include System
 
-This repository also supports a custom Markdown preprocessor that allows you to include content from other Markdown files using the `<!-- @include path/to/file.md -->` syntax. For more information, see [MARKDOWN_INCLUDES.md](MARKDOWN_INCLUDES.md).
+This repository also supports a custom Markdown preprocessor that allows you to include content from other Markdown files using the `{{path.to.folder|file}}` syntax.
